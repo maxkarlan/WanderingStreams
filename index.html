@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streams Flowing Downward with p5.js</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script>
+        let streams = [];
+        const numOfStreams = 100;
+        let circleRadius;
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            background(255);
+            circleRadius = width / 6;
+            for (let i = 0; i < numOfStreams; i++) {
+                let col = color(random(255), random(255), random(255));
+                streams.push(new Stream(col));
+            }
+        }
+
+        function draw() {
+            background(255);
+
+            // Draw the circle in the center of the window
+            fill(255);
+            noStroke();
+            ellipse(width / 2, height / 2, 2 * circleRadius);
+
+            for (let s of streams) {
+                s.update();
+                s.display();
+            }
+        }
+
+        class Stream {
+            constructor(color) {
+                this.color = color;
+                this.points = [];
+                this.noiseOffset = random(1000);
+                this.currentAngle = HALF_PI; // Setting the angle to make streams go downwards
+                this.initStream();
+            }
+
+            initStream() {
+                let startX = random(width);
+                let startY = 0; // Starting at the top boundary
+                this.points.push(createVector(startX, startY));
+            }
+
+            update() {
+                let lastPoint = this.points[this.points.length - 1];
+                let angleVariation = map(noise(this.noiseOffset), 0, 1, -PI / 4, PI / 4);
+                this.currentAngle += angleVariation;
+                let len = 5;
+                let newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
+
+                // Bounce off the circle
+                if (this.isInsideCircle(newPoint)) {
+                    let angleToCenter = atan2(height / 2 - newPoint.y, width / 2 - newPoint.x);
+                    this.currentAngle = 2 * angleToCenter - PI - this.currentAngle;
+                    newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
+                }
+
+                // Bounce off the canvas boundaries
+                if (newPoint.x <= 0 || newPoint.x >= width) {
+                    this.currentAngle = PI - this.currentAngle;
+                }
+                if (newPoint.y <= 0 || newPoint.y >= height) {
+                    this.currentAngle = TWO_PI - this.currentAngle;
+                }
+                newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
+
+                this.points.push(newPoint);
+                this.noiseOffset += 0.05;
+
+                if (this.points.length > 1000) {
+                    this.points.shift();
+                }
+            }
+
+            isInsideCircle(point) {
+                let distanceToCenter = dist(point.x, point.y, width / 2, height / 2);
+                return distanceToCenter < circleRadius;
+            }
+
+            display() {
+                noFill();
+                stroke(this.color);
+                strokeWeight(5);
+                beginShape();
+                for (let pt of this.points) {
+                    vertex(pt.x, pt.y);
+                }
+                endShape();
+            }
+        }
+
+    </script>
+</body>
+
+</html>
