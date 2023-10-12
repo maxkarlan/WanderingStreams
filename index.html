@@ -19,18 +19,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script>
         let streams = [];
-        const numOfStreams = 1000;
+        const numOfStreams = 1500;
         let circleRadius;
         let randomMovement = true;
+      let obstacles = [];
+      let pressCount = 0;
+const numOfObstacles = 30;  // Or any other number you like
+
 
         function setup() {
             createCanvas(windowWidth, windowHeight);
             background(255);
             circleRadius = width / 6;
             for (let i = 0; i < numOfStreams; i++) {
-                let col = color((0,155), 0, random(255)); // Start with a blue shade
+                let col = color(random(100,255), (0), random(0,155)); // Start with a blue shade
                 streams.push(new Stream(col));
             }
+          for (let i = 0; i < numOfObstacles; i++) {
+    obstacles.push(new Obstacle());
+}
+
         }
 
         function draw() {
@@ -47,23 +55,47 @@
             }
         }
 
-        function keyPressed() {
-            if (key === '1') {
-                randomMovement = !randomMovement;
+function keyPressed() {
+    if (key === '1') {
+        pressCount++;
 
-                for (let s of streams) {
-                    s.changeMovement(randomMovement);
-                }
+        if (pressCount % 2 === 0) {
+            // Every other time starting from the second time
+            obstacles = [];  // Clear existing obstacles
+            for (let i = 0; i < numOfObstacles; i++) {
+                obstacles.push(new Obstacle());
             }
         }
 
-        function getQuadrant(x, y) {
-            if (x < width / 2 && y < height / 2) return 1; // top-left
-            if (x >= width / 2 && y < height / 2) return 2; // top-right
-            if (x < width / 2 && y >= height / 2) return 3; // bottom-left
-            return 4; // bottom-right
+        randomMovement = !randomMovement;
+        for (let s of streams) {
+            s.changeMovement(randomMovement);
         }
+    }
+}
 
+
+ class Obstacle {
+    constructor() {
+        this.position = createVector(random(width), random(height));
+        this.radius = random(20, 160);
+        while (this.overlapsWithMainCircle()) {
+            this.position = createVector(random(width), random(height));
+        }
+    }
+
+    overlapsWithMainCircle() {
+        let distanceToCenter = dist(this.position.x, this.position.y, width / 2, height / 2);
+        return distanceToCenter < circleRadius + this.radius;  // Added "+ this.radius" to consider the entire obstacle
+    }
+
+    display() {
+        fill(150);
+        noStroke();
+        ellipse(this.position.x, this.position.y, this.radius * 2);
+    }
+}
+      
         class Stream {
             constructor(color) {
                 this.color = color;
@@ -118,6 +150,22 @@
     } else {
         this.insideCircle = false;
     }
+              for (let obstacle of obstacles) {
+    let distance = dist(lastPoint.x, lastPoint.y, obstacle.position.x, obstacle.position.y);
+    if (distance < obstacle.radius) {
+        // Repulsion effect
+let angleToObstacle = atan2(obstacle.position.y - lastPoint.y, obstacle.position.x - lastPoint.x);
+let deviationAngle = this.currentAngle - angleToObstacle;
+
+if (abs(deviationAngle) < PI / 2) {
+    this.currentAngle += map(distance, 0, obstacle.radius, -PI / 4, PI / 4);
+} else {
+    this.currentAngle -= map(distance, 0, obstacle.radius, -PI / 4, PI / 4);
+}
+
+    }
+}
+
           
                 // Bounce off the canvas boundaries
                 if (newPoint.x <= 0 || newPoint.x >= width) {
@@ -156,7 +204,7 @@
             display() {
                 noFill();
                 stroke(this.color);
-                strokeWeight(5);
+                strokeWeight(1);
                 beginShape();
                 for (let pt of this.points) {
                     vertex(pt.x, pt.y);
