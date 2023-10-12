@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,20 +15,20 @@
         }
     </style>
 </head>
-
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script>
         let streams = [];
-        const numOfStreams = 100;
+        const numOfStreams = 1000;
         let circleRadius;
+        let randomMovement = true;
 
         function setup() {
             createCanvas(windowWidth, windowHeight);
             background(255);
             circleRadius = width / 6;
             for (let i = 0; i < numOfStreams; i++) {
-                let col = color(random(255), random(255), random(255));
+                let col = color((0,155), 0, random(255)); // Start with a blue shade
                 streams.push(new Stream(col));
             }
         }
@@ -48,35 +47,78 @@
             }
         }
 
+        function keyPressed() {
+            if (key === '1') {
+                randomMovement = !randomMovement;
+
+                for (let s of streams) {
+                    s.changeMovement(randomMovement);
+                }
+            }
+        }
+
+        function getQuadrant(x, y) {
+            if (x < width / 2 && y < height / 2) return 1; // top-left
+            if (x >= width / 2 && y < height / 2) return 2; // top-right
+            if (x < width / 2 && y >= height / 2) return 3; // bottom-left
+            return 4; // bottom-right
+        }
+
         class Stream {
             constructor(color) {
                 this.color = color;
                 this.points = [];
                 this.noiseOffset = random(1000);
-                this.currentAngle = HALF_PI; // Setting the angle to make streams go downwards
+                this.currentAngle = random(TWO_PI);
                 this.initStream();
+                this.randomMovement = true;
             }
 
             initStream() {
-                let startX = random(width);
-                let startY = 0; // Starting at the top boundary
+                let startX, startY;
+                do {
+                    startX = random(width);
+                    startY = random(height);
+                } while (this.isInsideCircle(createVector(startX, startY)));
+
                 this.points.push(createVector(startX, startY));
             }
 
             update() {
                 let lastPoint = this.points[this.points.length - 1];
-                let angleVariation = map(noise(this.noiseOffset), 0, 1, -PI / 4, PI / 4);
-                this.currentAngle += angleVariation;
-                let len = 5;
-                let newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
 
-                // Bounce off the circle
-                if (this.isInsideCircle(newPoint)) {
-                    let angleToCenter = atan2(height / 2 - newPoint.y, width / 2 - newPoint.x);
-                    this.currentAngle = 2 * angleToCenter - PI - this.currentAngle;
-                    newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
-                }
+    if (this.insideCircle) {
+        // Random movement inside the circle
+        let angleVariation = map(noise(this.noiseOffset), 0, 1, -PI / 4, PI / 4);
+        this.currentAngle += angleVariation;
+    } else if (this.randomMovement) {
+        // Scatter movement
+        let angleVariation = map(noise(this.noiseOffset), 0, 1, -PI / 4, PI / 4);
+        this.currentAngle += angleVariation;
+    } else {
+        // Magnetized movement towards the circle
+        this.currentAngle = this.angleToCircleBorder(lastPoint);
+    }
+              
 
+    let len = 5;
+    let newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
+
+              
+              
+    if (this.isInsideCircle(newPoint) && !this.insideCircle && this.randomMovement) {
+        // If the stream is about to enter the circle and is not allowed to, bounce it away
+        let angleToCenter = this.angleToCircleBorder(newPoint);
+        this.currentAngle = 2 * angleToCenter - PI - this.currentAngle;
+        newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
+    }
+
+    if (this.isInsideCircle(newPoint)) {
+        this.insideCircle = true;
+    } else {
+        this.insideCircle = false;
+    }
+          
                 // Bounce off the canvas boundaries
                 if (newPoint.x <= 0 || newPoint.x >= width) {
                     this.currentAngle = PI - this.currentAngle;
@@ -84,16 +126,28 @@
                 if (newPoint.y <= 0 || newPoint.y >= height) {
                     this.currentAngle = TWO_PI - this.currentAngle;
                 }
+              
                 newPoint = p5.Vector.fromAngle(this.currentAngle).mult(len).add(lastPoint);
 
                 this.points.push(newPoint);
                 this.noiseOffset += 0.05;
 
-                if (this.points.length > 1000) {
+                if (this.points.length > 100) {
                     this.points.shift();
                 }
             }
-
+          
+            angleToCircleBorder(point) {
+                return atan2(height / 2 - point.y, width / 2 - point.x);
+            }
+          
+            changeMovement(randomMovement) {
+                this.randomMovement = randomMovement;
+                if (randomMovement) {
+                    this.insideCircle = false; // Ensure stream is set as outside the circle
+                }
+            }
+          
             isInsideCircle(point) {
                 let distanceToCenter = dist(point.x, point.y, width / 2, height / 2);
                 return distanceToCenter < circleRadius;
@@ -110,8 +164,6 @@
                 endShape();
             }
         }
-
     </script>
 </body>
-
 </html>
