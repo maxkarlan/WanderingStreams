@@ -106,15 +106,15 @@ function keyPressed() {
                 this.randomMovement = true;
             }
 
-            initStream() {
-                let startX, startY;
-                do {
-                    startX = random(width);
-                    startY = random(height);
-                } while (this.isInsideCircle(createVector(startX, startY)));
+initStream() {
+    let startX, startY;
+    do {
+        startX = random(width);
+        startY = random(height);
+    } while (!this.isInsideCircle(createVector(startX, startY))); // changed this condition
 
-                this.points.push(createVector(startX, startY));
-            }
+    this.points.push(createVector(startX, startY));
+}
 
             update() {
                 let lastPoint = this.points[this.points.length - 1];
